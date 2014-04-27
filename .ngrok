@@ -1,0 +1,9 @@
+auth_token: _R6plc1d4Y3ghfukfZIc
+tunnels:
+  scoutdatabase:
+    proto:
+      http: 8080
+
+  scoutclient:
+    proto:
+      http: 9002
