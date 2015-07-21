@@ -1,65 +1,21 @@
-#export TERM="xterm"
-#
-# ~/.bashrc
-#
+# TMUX
+#loc=`tty`
+#loc=${loc:5:8}
+#if [[ $loc =~ tty ]];then
+#    echo tty
+#else
+#    if which tmux 2>&1 >/dev/null; then
+#        # if no session is started, start a new session
+#        test -z ${TMUX} && tmux
+#        # when quitting tmux, try to attach
+#        while test -z ${TMUX}; do
+#        tmux attach || break
+#        done
+#    fi
+#fi
+alias default="tmux a -t default ||tmux new -s default"
 
-[[ $- != *i* ]] && return
-
-#PS1='[\u@\h \W]\$ '
-#ALIASES:
-#general
-alias ls='ls -a --color=always --group-directories-first'
-alias l='ls -CaFult'
-alias ipinfo="curl ipinfo.io" 
-alias findall='find *'
-alias diskspace="du -S | sort -n -r | more"
-alias emacs='emacs -nw --no-splash'
-alias mkserver='python -m SimpleHTTPServer'
-function ram() {
-    local sum
-    local items
-    local app="$1"
-    if [ -z "$app" ]; then
-	echo "First argument - pattern to grep from processes"
-    else 
-	sum=0
-	for i in `ps aux | grep -i "$app" | grep -v "grep" | awk '{print $6}'`; do
-	    sum=$(($i + $sum))
-	done 
-	sum=$(echo "scale=2; $sum / 1024.0" | bc)
-	if [[ $sum != "0" ]]; then
-	     echo "${fg[blue]}${app}${reset_color} uses ${fg[green]}${sum}${reset_color} MBs of RAM."
-	else  
-	     echo "There are no processes with pattern '${fg[blue]}${app}${reset_color}' are running."
-	fi
-    fi
-}
-function each() {
-    for dir in */; do
-	echo "${dir}:"
-	cd $dir
-	$@ 
-	cd ..
-    done  
-}
-
-#Servers
-alias binx='ssh befelber@binx.mbhs.edu'
-
-#Dot path changes
-alias .='cd ../'
-alias ..='cd ../../'
-alias ...='cd ../../../'
-alias ....='cd ../../../../'
-
-#FUNCTIONS
-cd(){
-builtin cd $1
-ls
-}
-
-
-
+#prompt format
 RESET="\[\e[0m\]"
 
 DBLACK="\[\e[49;30m\]"
@@ -88,13 +44,21 @@ PGRAY="\[\e[38;5;240m\]"
 
 UNDERLINE="\[\e[4m\]"
 
+
+export username_format
+#warning coloration to username when run as root
+if [ $EUID -eq 0 ]; then
+        username_format="$DRED"
+else
+        username_format="$DCYAN"
+fi
 export PS1="\
 ⌠┌\
 ${RESET}\
 ${DBLUE}\
 {\
 ${RESET}\
-${BCYAN}\
+${username_format}\
 \u\
 ${RESET}\
 ${DBLUE}\
@@ -119,21 +83,103 @@ ${RESET}
 ⌡└─\$ ›\
 ${RESET}"
 
-export PATH='/usr/lib/python3.4/site-packages/bin:/usr/local/sbin:/usr/local/bi
-n:/usr/bin:/usr/bin/core_perl:/home/xeno:/home/xeno/bin/'
-
-function findall {
-	find . -name "$1*"
+HISTFILE=~/.bash-histfile
+HISTSIZE=100000
+SAVEHIST=100000
+#Aliases/functions
+##ls to show hidden files, color it up, and group stuff sensibly
+alias ls='ls -A --color --group-directories-first' #I like color
+alias mpdscribb="mpdscribble --conf ~/.config/mpdscribble/mpdscribble.conf"
+alias ipinfo="curl ipinfo.io"
+alias history-stat="history 0 | awk '{print \$2}' | sort | uniq -c | sort -n -r | head"
+alias aurdate='yaourt -Syua --devel' #update repos/aur packages
+alias orphans='sudo pacman -Rns $(pacman -Qtdq)' #recursively remove orphaned packages
+alias mkserver='python -m http.server'
+alias dirsizes='find . -maxdepth 1 -type d -print0 | xargs -0 du -skh | sort -rn'
+alias umd='sshfs bfelber@vclfs.eng.umd.edu:/ /mnt/UMD -C -p 22' #remount UMD filesystem
+alias grep='grep --binary-files=without-match --color=auto --directories=recurse --line-number'
+paux(){
+    ps aux|head -1
+    ps aux|grep $1 |grep -v "grep"
+}
+cd(){
+builtin cd $1
+ls
+}
+get3x3(){
+pushd
+cd ~/Pictures/Charts
+wget "http://www.tapmusic.net/lastfm/collage.php?user=inthedeeptime&type=7day&size=3x3&caption=true"
+mv ./collage.php* ./3x3-$(date +"%m-%d-%y").jpg
+popd
+}
+get5x5(){
+pushd
+cd ~/Pictures/Charts
+wget "http://www.tapmusic.net/lastfm/collage.php?user=inthedeeptime&type=7day&size=5x5&caption=true"
+mv ./collage.php* ./5x5-$(date +"%A-%m-%d-%y").jpg
+popd
+}
+get4x4(){
+pushd
+cd ~/Pictures/Charts
+wget "http://www.tapmusic.net/lastfm/collage.php?user=inthedeeptime&type=7day&size=4x4&caption=true"
+mv ./collage.php* ./4x4-$(date +"%m-%d-%y").jpg
+popd
+}
+background(){
+    while :
+    do
+        feh --bg-scale --randomize ~/Pictures/Backgrounds/Music/*
+        read x
+    done
+}
+function ram() {
+  local sum
+  local items
+  local app="$1"
+  if [ -z "$app" ]; then
+echo "First argument - pattern to grep from processes"
+  else
+      sum=0
+    for i in `ps aux | grep -i "$app" | grep -v "grep" | awk '{print $6}'`; do
+	sum=$(($i + $sum))
+    done
+    sum=$(echo "scale=2; $sum / 1024.0" | bc)
+    if [[ $sum != "0" ]]; then
+	echo "${fg[blue]}${app}${reset_color} uses ${fg[green]}${sum}${reset_color} MBs of RAM."
+    else
+	echo "There are no processes with pattern '${fg[blue]}${app}${reset_color}' are running."
+    fi
+fi
+}
+screenlow(){
+    avconv -f x11grab -r 25 -s 1680x1050 -i :0.0 /tmp/$1.mp4
+}
+screenhigh(){
+    ffmpeg -f x11grab -r 25 -s 1680x1050 -i :0.0 -vcodec libx264 -preset ultrafast -crf 0 /tmp/$1.mkv
+}
+function each() {
+  for dir in */; do
+      echo "${dir}:"
+      cd $dir
+      $@
+      cd ..
+  done
 }
 
-function mkcd {
-	mkdir $1
-	cd $1
+up(){
+LIMIT=$1
+P=$PWD
+for ((i=1; i <= LIMIT; i++))
+do
+    P=$P/..
+done
+cd $P
+export MPWD=$P
 }
-
-function unmeta {
-	cat $1 > $2
-	mv $2 $1
+muxav() {
+  ffmpeg -i ${1:r}.mp4 -i ${1:r}.m4a -map 0:v -map 1:a -codec copy -shortest ${1:r}.muxed.mp4
 }
 
 function extract {
@@ -156,28 +202,6 @@ function extract {
 		echo "'$1' is not a valid file!"
 	fi
  }
-
-function up {
-	local d=""
-	limit=$1
-	for ((i=1 ; i <= limit ; i++))
-		do
-			d=$d/..
-		done
-	d=$(echo $d | sed 's/^\///')
-	if [ -z "$d" ]; then
-		d=..
-	fi
-	cd $d
-}
-
-function ascii {
-	for i in {1..256};
-		do p=" $i";
-		echo -e "${p: -3} \\0$(($i/64*100+$i%64/8*10+$i%8))";
-		done|cat -t|column -c120
-}
-
 function color256 {
 	for fgbg in 38 48 ; do #Foreground/Background
 		for color in {0..256} ; do #Colors
@@ -191,80 +215,46 @@ function color256 {
 		echo #New line
 	done
 }
-
-function hg {
-	history | grep $* ;
+function connect(){
+    sudo ip link set wlp3s0 up
+    sudo iw dev wlp3s0 connect $1
+    sudo dhcpcd wlp3s0
+    }
+webm(){
+    x=$1
+    x=${x%.mkv}.webm
+    echo $x
+    ffmpeg -i $1 -c:v libvpx -crf 4 -b:v 1500K -vf scale=1200:-1 "$xwebm"
+    }
+back(){
+LIMIT=$1
+P=$MPWD
+for ((i=1; i <= LIMIT; i++))
+do
+    P=${P%/..}
+done
+cd $P
+export MPWD=$P
 }
-
-function symlist {
-	find ./ -type l -ls
-}
-
-alias dirsizes='find . -maxdepth 1 -type d -print0 | xargs -0 du -sk | sort -rn'
-alias symlink="ln -s"
-alias gpp='g++ *.cpp'
-alias chdist='chmod 755'
-alias chpriv='chmod 700'
-alias chpub='chmod 777'
-
-LS_COLORS='di=1;92:cd=31:ex=1;32:fi=1;31:*.sh=1;95'
-export LS_COLORS
-
-#if [ "$PS1" != "" -a "${STARTED_SCREEN:-x}" = x  -a "${SSH_TTY:-x}" != x ]
-#then
-#	STARTED_SCREEN=1 ; export STARTED_SCREEN
-#	[ -d $HOME/lib/screen-logs ] || mkdir -p $HOME/lib/screen-logs
-#
-#	sleep 1
-#	screen -U -RR && exit 0
-#
-#	echo "Recovering from network disconnect."
-#fi
-
-#0   = default colour
-#1   = bold
-#4   = underlined
-#5   = flashing text
-#7   = reverse field
-#31  = red
-#32  = green
-#33  = orange
-#34  = blue
-#35  = purple
-#36  = cyan
-#37  = grey
-#40  = black background
-#41  = red background
-#42  = green background
-#43  = orange background
-#44  = blue background
-#45  = purple background
-#46  = cyan background
-#47  = grey background
-#90  = dark grey
-#91  = light red
-#92  = light green
-#93  = yellow
-#94  = light blue
-#95  = light purple
-#96  = turquoise
-#100 = dark grey background
-#101 = light red background
-#102 = light green background
-#103 = yellow background
-#104 = light blue background
-#105 = light purple background
-#106 = turquoise background
-
-#di = directory
-#fi = file
-#ln = symbolic link
-#pi = fifo file
-#so = socket file
-#bd = block (buffered) special file
-#cd = character (unbuffered) special file
-#or = symbolic link pointing to a non-existent file (orphan)
-#mi = non-existent file pointed to by a symbolic link (visible when you type ls -l)
-#ex = file which is executable (ie. has 'x' set in permissions).
-#cowsay -f $(ls /usr/share/cowsay/cows/ | shuf -n1) $(fortune)
-export PATH=$PATH:/home/16/befelber/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/home/16/befelber:/home/16/befelber/bin/aesthetics
+say() {
+    if [[ "${1}" =~ -[a-z]{2} ]]; then
+        local lang=${1#-};
+        local text="${*#$1}";
+    else
+        local lang=${LANG%_*};
+        local text="$*";
+    fi;
+    mpv "http://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&q=${text}"  &> /dev/null
+    }
+export
+PATH=$PATH:$HOME/bin:$HOME/opt/go/bin:/usr/local/sbin:/usr/local/texlive/2014/bin/i386-linux:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
+export MANPATH=:/usr/local/texlive/2014/texfm-dist/doc/man:
+export GOPATH=~/go
+export GOROOT=~/opt/go
+export PATH=$PATH:~/go/bin
+export EDITOR=emacs
+export BLOCK_SIZE=human-readable
+clear
+mesg ne
+export disk="/run/media/benjamin/B392-AB62/"
+source /usr/share/doc/pkgfile/command-not-found.zsh

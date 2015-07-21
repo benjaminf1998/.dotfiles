@@ -1,13 +1,19 @@
 # TMUX
-if which tmux 2>&1 >/dev/null; then
-    # if no session is started, start a new session
-    test -z ${TMUX} && tmux
-
-    # when quitting tmux, try to attach
-    while test -z ${TMUX}; do
-        tmux attach || break
-    done
-fi
+#loc=`tty`
+#loc=${loc:5:8}
+#if [[ $loc =~ tty ]];then
+#    echo tty
+#else
+#    if which tmux 2>&1 >/dev/null; then
+#        # if no session is started, start a new session
+#        test -z ${TMUX} && tmux
+#        # when quitting tmux, try to attach
+#        while test -z ${TMUX}; do
+#        tmux attach || break
+#        done
+#    fi
+#fi
+alias default="tmux a -t default ||tmux new -s default"
 #Color table from: http://www.understudy.net/custom.html
 fg_black=%{$'\e[0;30m'%}
 fg_red=%{$'\e[0;31m'%}
@@ -50,21 +56,14 @@ at_blinkoff=%{$'\e[25m'%}
 at_reverseoff=%{$'\e[27m'%}
 at_strikeoff=%{$'\e[29m'%}
 
-#PROMPT="
-#${fg_lgreen}%n@${at_underl}%m${at_underloff}${fg_white}[${fg_cyan}%~${fg_white\}]
-#[${fg_green}%T${fg_white}]:${at_normal}"
 
 #Set the auto completion on
 autoload -U compinit
 compinit
+compdef _id3v2 id3v2 mid3v2
 
 #Let's set some options
-setopt correctall
-setopt autocd
-setopt auto_resume
-
-## Enables the extgended globbing features
-setopt extendedglob
+setopt correctall autocd auto_resume autopushd HIST_IGNORE_DUPS BANG_HIST HIST_EXPIRE_DUPS_FIRST HIST_IGNORE_SPACE HIST_VERIFY histexpiredupsfirst histreduceblanks longlistjobs extendedglob
 
 #Set some ZSH styles
 #zstyle ':completion:*:descriptions' format '%U%B%d%b%u'
@@ -74,14 +73,15 @@ zstyle ':completion:*' list-colors ''
 zstyle ':completion:*' menu select=0
 
 HISTFILE=~/.zsh-histfile
-HISTSIZE=1000
-SAVEHIST=1000
+HISTSIZE=100000
+SAVEHIST=100000
 bindkey -e
 # Prompt configuration
 
 local username_format
+#warning coloration to username when run as root
 if [ $EUID -eq 0 ]; then
-        username_format="%F{blue}"
+        username_format="%F{red}"
 else
         username_format="%F{cyan}"
 fi
@@ -93,23 +93,25 @@ reset="%f%k%b"
 PROMPT="${bracket_format}[${reset}${username_format}%n${reset}${at_format}@${re\
 set}${host_format}%m${reset} ${dir_format}%~${reset}${bracket_format}]${reset} \
 "
-RPROMPT='%F{green}[%F{blue}%t %W%F{green}]%F{blue}'
-alias lh="ls -lh"
-alias ldir='ls -d */'
+RPROMPT='%1(j.%F{yellow}jobs:%j;%f .)%(?.%F{green}ok%f.%F{red}%?%f)' #exit code of last job notation
 #Aliases
-##ls, the common ones I use a lot shortened for rapid fire usage
-alias ls='ls -A --color' #I like color
-alias l='ls -lAFh'     #size,show type,human readable
-alias la='ls -lAFh'   #long list,show almost all,show type,human readable
-alias lr='ls -tRFh'   #sorted by date,recursive,show type,human readable
-alias lt='ls -ltFh'   #long list,sorted by date,show type,human readable
-#alias mpv='mpv --fs --framedrop=yes'
-#alias mpdviz="mpdviz -i --imode='256'"
-#alias pipetobash=mybash
-#alias optiscrot=nicescrot
+##ls to show hidden files, color it up, and group stuff sensibly
+alias ls='ls -A --color --group-directories-first' #I like color
 alias mpdscribb="mpdscribble --conf ~/.config/mpdscribble/mpdscribble.conf"
 alias ipinfo="curl ipinfo.io"
 alias history-stat="history 0 | awk '{print \$2}' | sort | uniq -c | sort -n -r | head"
+alias aurdate='yaourt -Syua --devel' #update repos/aur packages
+alias orphans='sudo pacman -Rns $(pacman -Qtdq)' #recursively remove orphaned packages
+alias mkserver='python -m http.server'
+alias dirsizes='find . -maxdepth 1 -type d -print0 | xargs -0 du -skh | sort -rn'
+alias umd='sshfs bfelber@vclfs.eng.umd.edu:/ /mnt/UMD -C -p 22' #remount UMD filesystem
+alias grep='grep --binary-files=without-match --color=auto --directories=recurse --line-number'
+#Functions
+#This should all be in $HOME/bin, but fuck you
+paux(){
+    ps aux|head -1
+    ps aux|grep $1 |grep -v "grep"
+}
 cd(){
 builtin cd $1
 ls
@@ -128,47 +130,34 @@ wget "http://www.tapmusic.net/lastfm/collage.php?user=inthedeeptime&type=7day&si
 mv ./collage.php* ./5x5-$(date +"%A-%m-%d-%y").jpg
 popd
 }
-#cg(){
-#x=$1
-#read -p 'Search for what?' query
-#cat $1 |grep $query
-#echo -n $
-#}
-cl(){
-cat $1 |less
+get4x4(){
+pushd
+cd ~/Pictures/Charts
+wget "http://www.tapmusic.net/lastfm/collage.php?user=inthedeeptime&type=7day&size=4x4&caption=true"
+mv ./collage.php* ./4x4-$(date +"%m-%d-%y").jpg
+popd
 }
-
-#ncmpcpp(){
-#if $(ps -e|grep mpdscribble); then
-#    ncmpcpp
-#else
-#    mpdscribb
-#    ncmpcpp
-#fi
-#}
-#nicescrot()
-#{
-#read -p "Filename: " filename
-#scrot -cd 3 "$filename";optipng '$filename'
-#} 
-#mybash()
-#{
-#echo "$1"|bash
-#}
-##cd, because typing the backslash is A LOT of work!!
-alias .='cd ../'
-alias ..='cd ../../'
-alias ...='cd ../../../'
-alias ....='cd ../../../../'
-# SSH aliases - short cuts to ssh to a host
-alias binx='ssh befelber@binx.mbhs.edu'
-alias ramu='ssh befelber@systemic.io'
-alias emacs='emacs -nw --no-splash'
-alias mkserver='python -m SimpleHTTPServer'
-
-# Screen aliases - add a new screen , or entire session, name it, then ssh to the host
-#alias sshost='screen -t HOST shost'# Enable compsys completion.
-#START USEFUL SCRIPTS
+background(){
+    while :
+    do
+        feh --bg-scale --randomize ~/Pictures/Backgrounds/Music/*
+        read x
+    done
+}
+timer(){
+    x=0;watcher=0;
+    while [ $watcher = 0 ]
+    do
+        let "x = $x + 1"
+        let "q = $x / 60"
+        let "z = $x % 60"
+        echo "$q mins $z secs"
+        if [ $x -eq $1 ];then;
+            notify-send "UR DONE BRUH" "Time's up" --icon=system-shutdown
+            watcher=1
+        fi;sleep 1;clear
+done
+}
 function ram() {
   local sum
   local items
@@ -188,8 +177,11 @@ echo "First argument - pattern to grep from processes"
     fi
 fi
 }
-screengrab(){
+screenlow(){
     avconv -f x11grab -r 25 -s 1680x1050 -i :0.0 /tmp/$1.mp4
+}
+screenhigh(){
+    ffmpeg -f x11grab -r 25 -s 1680x1050 -i :0.0 -vcodec libx264 -preset ultrafast -crf 0 /tmp/$1.mkv
 }
 function each() {
   for dir in */; do
@@ -199,6 +191,7 @@ function each() {
       cd ..
   done
 }
+
 up(){
 LIMIT=$1
 P=$PWD
@@ -209,12 +202,56 @@ done
 cd $P
 export MPWD=$P
 }
-pissoff(){
-for i in read q
-do
-echo "$q"
-done <$1
+muxav() {
+  ffmpeg -i ${1:r}.mp4 -i ${1:r}.m4a -map 0:v -map 1:a -codec copy -shortest ${1:r}.muxed.mp4
 }
+findall(){
+    find . -name "$1*"
+}
+function extract {
+	if [ -f $1 ] ; then
+		case $1 in
+			*.tar.bz2)   tar xvjf $1    ;;
+			*.tar.gz)    tar xvzf $1    ;;
+			*.bz2)       bunzip2 $1     ;;
+			*.rar)       unrar x $1       ;;
+			*.gz)        gunzip $1      ;;
+			*.tar)       tar xvf $1     ;;
+			*.tbz2)      tar xvjf $1    ;;
+			*.tgz)       tar xvzf $1    ;;
+			*.zip)       unzip $1       ;;
+			*.Z)         uncompress $1  ;;
+			*.7z)        7z x $1        ;;
+			*)           echo "don't know how to extract '$1'..." ;;
+		esac
+	else
+		echo "'$1' is not a valid file!"
+	fi
+ }
+function color256 {
+	for fgbg in 38 48 ; do #Foreground/Background
+		for color in {0..256} ; do #Colors
+			#Display the color
+			echo -en "\e[${fgbg};5;${color}m ${color}\t\e[0m"
+			#Display 10 colors per lines
+			if [ $((($color + 1) % 10)) == 0 ] ; then
+				echo #New line
+			fi
+		done
+		echo #New line
+	done
+}
+function connect(){
+    sudo ip link set wlp3s0 up
+    sudo iw dev wlp3s0 connect $1
+    sudo dhcpcd wlp3s0
+    }
+webm(){
+    x=$1
+    x=${x%.mkv}.webm
+    echo $x
+    ffmpeg -i $1 -c:v libvpx -crf 4 -b:v 1500K -vf scale=1200:-1 "$xwebm"
+    }
 back(){
 LIMIT=$1
 P=$MPWD
@@ -225,12 +262,30 @@ done
 cd $P
 export MPWD=$P
 }
-export PATH=$PATH:/home/16/befelber/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/home/16/befelber:/home/16/befelber/bin/aesthetics
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
-#cowsay -f $(ls /usr/share/cowsay/cows/ | shuf -n1) $(fortune)
-set completion-ignore-case on
+say() {
+    if [[ "${1}" =~ -[a-z]{2} ]]; then
+        local lang=${1#-};
+        local text="${*#$1}";
+    else
+        local lang=${LANG%_*};
+        local text="$*";
+    fi;
+    mpv "http://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&q=${text}"  &> /dev/null
+    }
+export
+PATH=$PATH:$HOME/bin:$HOME/opt/go/bin:/usr/local/sbin:/usr/local/texlive/2014/bin/i386-linux:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
+export MANPATH=:/usr/local/texlive/2014/texfm-dist/doc/man:
+export GOPATH=~/go
+export GOROOT=~/opt/go
+export PATH=$PATH:~/go/bin
+export EDITOR=emacs
+export BLOCK_SIZE=human-readable
 clear
-#echo "Current Users:"
-#finger |grep -v befelber|grep -v Login
 mesg ne
+#suffixes
+alias -s mp3=mpv
+alias -s flac=mpv
+alias -s go=emacs
+alias -s epub=firefox
+export disk="/run/media/benjamin/B392-AB62/"
+source /usr/share/doc/pkgfile/command-not-found.zsh
