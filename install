@@ -2,12 +2,11 @@
 pwd=$(pwd)
 for i in $(ls -A)
 do
-if [ $i != ".git" ] && [ $i != "install.sh" ]
+if [ $i != ".git" ] && [ $i != "install" ] && [ $i != "README.md" ]
 then
 pushd ./ >/dev/null
 cd ~
-echo $i
-if [ -z $(ls -a|grep $i) ];then
+if [ -z $(ls -A|grep -F $i) ];then
 ln -s $pwd/$i
 echo "Symlink for $i created"
 else
